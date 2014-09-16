@@ -1,0 +1,168 @@
+docbook: FreeBSD FDP (1)
+
+
+一、PDF文档的字体，无法显示中文问题，字体配置。
+原因：设置的中文字体找不到。
+
+$DOC_ROOT/share/xml/freebsd-fo.xsl
+
+<xsl:param name="body.font.family">Songti SC, STFangsong, STSong</xsl:param>
+
+<xsl:param name="sans.font.family">STHeiti, STKaiti, Hei, Heiti SC</xsl:param>
+
+<xsl:param name="title.font.family">STHeiti, STKaiti, Hei, Heiti SC</xsl:param>
+
+<xsl:param name="monospace.font.family">Hei, Heiti SC</xsl:param>
+
+
+
+二、在Mac机器上，html的类似 program listing、screen等，没有css效果。
+
+原因：Mac上的docbook库默认没有使用严格html编译选项
+
+解决办法：设置
+
+<xsl:param name="make.clean.html" select="0"></xsl:param>
+
+
+
+三、XSL配置文档
+
+http://docbook.sourceforge.net/release/xsl/1.77.0/doc/html/index.html
+
+四、文章（article）的目录显示深度修改
+
+问题：原先FDP的article类型的文档的TOC显示层次，<sect2>的层次在目录中不显示。如何让该层次显示呢？
+
+解决办法：<xsl:param name="toc.section.depth">3</xsl:param>
+
+
+四、Mac上的Makefile文件编写
+
+问题：
+	1、解决编译过程中的工具找不到的问题；
+	2、解决本地图片资源无法定位找到的问题；
+
+
+Makefile 文件
+
+#
+# The FreeBSD Simplified Chinese Project
+#
+# Original Revision: 1.2
+# $FreeBSD$
+#
+# Article: Introduction to NanoBSD
+
+DOC?= article
+
+#
+# 打开这个，让图片不要到原先freebsd设定的share/images/目录下去找
+#
+IMAGES_LIB_DIR= ${.CURDIR}/images 
+
+#
+# 打开这个,解决pdf找不到外部图片,在图片的fileref＝imagelib/a.png
+# 并且需要 修改 doc.docbook.mk 文件，内容见下。
+# 如果写成 IMGDIR＝ ${.CURDIR}/imagelib , 且 fileref=a.png
+# 会导致html格式的找不到图片 
+IMGDIR= ${.CURDIR}/    
+
+LOCALBASE?= /usr
+FOP?= /opt/local/bin/fop
+
+FORMATS?= html html-split #pdf
+WITH_ARTICLE_TOC?= YES
+
+INSTALL_COMPRESSED?= 
+INSTALL_ONLY_COMPRESSED?=
+
+# Images from the cross-document image library
+IMAGES_LIB=  callouts/1.png
+IMAGES_LIB+= callouts/2.png
+IMAGES_LIB+= callouts/3.png
+IMAGES_LIB+= callouts/4.png
+
+SRCS=	article.xml
+
+URL_RELPREFIX?=	../../../..
+DOC_PREFIX?=	${.CURDIR}/../../..
+
+.include "${DOC_PREFIX}/share/mk/doc.project.mk”
+
+
+
+doc.docbook.mk 修改
+
+Index: doc.docbook.mk
+
+===================================================================
+
+--- doc.docbook.mk	(revision 45358)
+
++++ doc.docbook.mk	(working copy)
+
+@@ -65,6 +65,7 @@
+
+ 
+
+ SCHEMATRONS?=	${DOC_PREFIX}/share/xml/freebsd.sch
+
+ XSLTPROCOPTS?=	--nonet
+
++XSLTPROCOPTS2?=
+
+ 
+
+ IMGDIR?=	${IMAGES_EN_DIR}/${DOC}s/${.CURDIR:T}
+
+ CALLOUTDIR=	${.CURDIR}/imagelib/callouts
+
+@@ -185,9 +186,9 @@
+
+ CLEANFILES+= ${DOC}.aux ${DOC}.dvi ${DOC}.log ${DOC}.out ${DOC}.tex-pdf ${DOC}.tex-pdf-tmp \
+
+ 	 ${DOC}.tex ${DOC}.fo
+
+ .if ${RENDERENGINE} == "fop"
+
+-XSLTPROCOPTS+=	--param img.src.path "'${IMGDIR}/'"
+
+-XSLTPROCOPTS+=	--param callout.graphics.path "'${CALLOUTDIR}/'"
+
+-XSLTPROCOPTS+=	--maxdepth 6000
+
++XSLTPROCOPTS2+=	--param img.src.path "'${IMGDIR}/'"
+
++XSLTPROCOPTS2+=	--param callout.graphics.path "'${CALLOUTDIR}/'"
+
++XSLTPROCOPTS2+=	--maxdepth 6000
+
+ .endif
+
+ .for _curimage in ${LOCAL_IMAGES_EPS:M*share*}
+
+ CLEANFILES+= ${_curimage:T} ${_curimage:H:T}/${_curimage:T}
+
+@@ -336,8 +337,9 @@
+
+ 
+
+ # PS/PDF/RTF -----------------------------------------------------------------
+
+ 
+
++XSLTPROCOPTS2 += ${XSLTPROCOPTS}
+
+ ${DOC}.fo: ${DOC}.xml ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG} ${DOC}.parsed.xml ${XML_INCLUDES}
+
+-	${XSLTPROC} ${XSLTPROCOPTS} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
+
++	${XSLTPROC} ${XSLTPROCOPTS2} ${XSLFO} ${DOC}.parsed.print.xml > ${.TARGET}
+
+ 
+
+ .if ${RENDERENGINE} == "fop"
+
+ ${DOC}.pdf: ${DOC}.fo ${LOCAL_IMAGES_LIB} ${LOCAL_IMAGES_PNG}
+
