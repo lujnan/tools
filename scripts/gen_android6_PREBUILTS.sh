@@ -1,15 +1,19 @@
 
 EABI_FORMAT="armeabi"
-
+IS32BIT_FLAGS=
 if [[ ${EABI_FORMAT} == "armeabi" ]]
 then
-	32BITFLAGS="true"
+	IS32BIT_FLAGS="true"
 fi
 
 if [[ ${EABI_FORMAT} == "arm64-v8a" ]]
 then
-	32BITFLAGS="true"
+	IS32BIT_FLAGS="false"
 fi
+
+
+echo ""
+echo "LOCAL_PATH := \$(call my-dir)"
 
 for i in *.so
 do
@@ -22,8 +26,7 @@ do
         echo "LOCAL_MODULE_CLASS := SHARED_LIBRARIES"
         echo "LOCAL_MODULE_TAGS := optional"
         echo "LOCAL_MODULE_SUFFIX := .so"
-	echo "LOCAL_32_BIT_ONLY   := true"
-        echo "LOCAL_MULTILIB := 32"
+	echo "LOCAL_32_BIT_ONLY   := ${IS32BIT_FLAGS}"
 	echo "include \$(BUILD_PREBUILT)"
-	echo ""
 done
+echo ""
